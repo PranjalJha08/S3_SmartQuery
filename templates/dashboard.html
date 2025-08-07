@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S3 SmartQuery Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; background: #90EE90; }
+        .main-heading {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: underline;
+            margin-bottom: 1em;
+        }
+        .main-heading img {
+            margin-left: 20px;
+            height: 60px;
+        }
+        .query-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2em;
+        }
+        .query-box input[type="text"] {
+            width: 400px;
+            padding: 0.5em;
+            font-size: 1.1em;
+            border: 2px solid #2c3e50;
+            border-radius: 6px;
+            margin-right: 1em;
+        }
+        .query-box button {
+            padding: 0.5em 1.2em;
+            font-size: 1.1em;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .query-result {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 2em;
+            color: #1a3d1a;
+        }
+        .dashboard-cards {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 2em;
+            margin-bottom: 2em;
+        }
+        .dashboard-card {
+            flex: 1;
+            border: 2px solid #2c3e50;
+            border-radius: 12px;
+            padding: 1.5em 1em;
+            background: #fffbe6;
+            box-shadow: 2px 2px 8px #b0b0b0;
+        }
+        .dashboard-card:nth-child(1) { background: #e0f7fa; }
+        .dashboard-card:nth-child(2) { background: #ffe0e6; }
+        .dashboard-card:nth-child(3) { background: #e6ffe6; }
+        .dashboard-card h2 {
+            text-align: center;
+            text-decoration: underline;
+            margin-top: 0;
+        }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 2em; }
+        th, td {
+            border: 2px solid #2c3e50;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #d0f0c0;
+            font-weight: bold;
+            text-align: center;
+        }
+        td {
+            background: #f8fff8;
+        }
+        .section { margin-bottom: 2em; }
+    </style>
+</head>
+<body>
+    <div class="main-heading">
+        <span>S3 SmartQuery Dashboard</span>
+        <img src="/static/s3-bucket.png" alt="S3 Bucket Logo">
+    </div>
+    <form class="query-box" id="queryForm">
+        <input type="text" id="queryInput" placeholder="Ask a question about your files..." required>
+        <button type="submit">Ask</button>
+    </form>
+    <div class="query-result" id="queryResult"></div>
+    <div class="dashboard-cards">
+        <div class="dashboard-card">
+            <h2>File Type Counts</h2>
+            <ul>
+                {% for ext, count in counts.items() %}
+                    <li>{{ ext }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="dashboard-card">
+            <h2>Uploads by User</h2>
+            <ul>
+                {% for user, count in user_counts.items() %}
+                    <li>{{ user }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="dashboard-card">
+            <h2>Total Storage Used</h2>
+            <p style="text-align:center; font-size:1.5em; font-weight:bold;">{{ (total_gb * 1024 * 1024)|round(2) }} KB</p>
+        </div>
+    </div>
+    <div class="section">
+        <h2>Files</h2>
+        <table>
+            <tr>
+                <th>Key</th>
+                <th>Size (bytes)</th>
+                <th>Last Modified</th>
+                <th>Download</th>
+            </tr>
+            {% for file in files %}
+            <tr>
+                <td>{{ file.Key }}</td>
+                <td>{{ file.Size }}</td>
+                <td>{{ file.LastModified }}</td>
+                <td><a href="/download?filename={{ file.Key }}">Download</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="section">
+        <h2>Upload File</h2>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <input type="text" name="uploader" placeholder="Uploader name">
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('queryForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent form from reloading the page
+            const query = document.getElementById('queryInput').value;
+            const resultDiv = document.getElementById('queryResult');
+            resultDiv.textContent = 'Loading...';
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await response.json();
+                resultDiv.textContent = data.result;
+            } catch (e) {
+                resultDiv.textContent = 'Error: ' + e;
+            }
+        });
+    </script>
+</body>
+</html>
